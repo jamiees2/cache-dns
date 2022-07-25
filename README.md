@@ -1,6 +1,6 @@
 # cached-dns 
 [![Build Status](https://github.com/jamiees2/cached-dns/actions/workflows/main.yml/badge.svg)](https://github.com/jamiees2/cached-dns/actions)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Docs](https://img.shields.io/badge/Docs-latest-informational)](https://github.com/jamiees2/cached-dns/)
 
 DNS caching implementation for Node.js. Provides same API as [`dns.lookup`](https://nodejs.org/api/dns.html#dnslookuphostname-options-callback)
@@ -8,7 +8,7 @@ DNS caching implementation for Node.js. Provides same API as [`dns.lookup`](http
 [![NPM](https://nodeico.herokuapp.com/cached-dns.svg)](https://npmjs.com/package/cached-dns)
 
 ## Install
-    $ npm installcached-dns 
+    $ npm install cached-dns 
 
 ## Usage
 
@@ -35,8 +35,8 @@ http.get({
 Alternatively, you can tell the library to overwrite the `dns` module's `lookup` function, with this implementation. This makes it easier to patch existing code, but is dangerous.
 
 ```js
-const cacheDNS = require("cached-dns")
-cacheDNS.patchDnsLookup()
+const cachedDNS = require("cached-dns")
+cachedDNS.patchGlobal()
 
 // this will now get cached by default
 http.get({

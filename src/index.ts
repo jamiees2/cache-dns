@@ -2,7 +2,7 @@ import * as dns from 'dns';
 import * as ipaddr from 'ipaddr.js';
 import * as os from 'os';
 
-type CacheDnsDefaults = {
+export type CachedDnsDefaults = {
   defaultFamily: number | undefined;
   defaultHints: number | undefined;
 };
@@ -51,7 +51,7 @@ class AddressCache {
   }
 }
 
-let cacheDnsDefaults: CacheDnsDefaults = {
+let defaultOptions: CachedDnsDefaults = {
   defaultFamily: undefined,
   defaultHints: undefined,
 };
@@ -185,10 +185,10 @@ async function lookupPromise(
   }
 
   if (!options.family) {
-    options.family = cacheDnsDefaults.defaultFamily;
+    options.family = defaultOptions.defaultFamily;
   }
   if (!options.hints) {
-    options.hints = cacheDnsDefaults.defaultHints;
+    options.hints = defaultOptions.defaultHints;
   }
 
   // TODO: DEP0118
@@ -428,7 +428,7 @@ const clearSupportedFamilies = () => {
   cachedSupportedFamilies = null;
 };
 
-const patchDnsLookup = () => {
+const patchGlobal = () => {
   const dnsLib = require('dns');
   dnsLib.uncachedLookup = dnsLib.lookup;
   dnsLib.lookup = lookup;
@@ -436,21 +436,21 @@ const patchDnsLookup = () => {
   dnsLib.promises.lookup = lookupPromise;
 };
 
-const unpatchDnsLookup = () => {
+const unpatchGlobal = () => {
   const dnsLib = require('dns');
   dnsLib.lookup = dnsLib.uncachedLookup;
   dnsLib.promises.lookup = dnsLib.promises.uncachedLookup;
 };
 
-const setDefaults = (defaults: Partial<CacheDnsDefaults>) => {
-  cacheDnsDefaults = {...cacheDnsDefaults, ...defaults};
+const setDefaults = (defaults: Partial<CachedDnsDefaults>) => {
+  defaultOptions = {...defaultOptions, ...defaults};
 };
 
 export {
   lookup,
   lookupPromise,
-  patchDnsLookup,
-  unpatchDnsLookup,
+  patchGlobal,
+  unpatchGlobal,
   setDefaults,
   clearSupportedFamilies,
 };
