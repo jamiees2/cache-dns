@@ -1,6 +1,6 @@
 {
-  "name": "cache-dns",
-  "version": "0.0.0",
+  "name": "cached-dns",
+  "version": "0.0.1",
   "description": "A library to cache DNS lookups in Node.js",
   "main": "./build/src/index.js",
   "types": "./build/src/index.d.ts",
@@ -21,10 +21,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jamiees2/cache-dns"
+    "url": "https://github.com/jamiees2/cached-dns"
   },
-  "bugs": "https://github.com/jamiees2/cache-dns/issues",
-  "homepage": "https://github.com/jamiees2/cache-dns",
+  "bugs": "https://github.com/jamiees2/cached-dns/issues",
+  "homepage": "https://github.com/jamiees2/cached-dns",
   "engines": {
     "node": ">=12.9.0"
   },
