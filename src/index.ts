@@ -432,7 +432,7 @@ const getSupportedFamilies = (): LookupType => {
       cachedSupportedFamilies = LookupType.IPv4Andv6;
       return LookupType.IPv4Andv6;
     } else {
-      const result = supported.entries().next().value;
+      const result = supported.values().next().value;
       cachedSupportedFamilies = result;
       return result;
     }
