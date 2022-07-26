@@ -3,8 +3,9 @@ import * as ipaddr from 'ipaddr.js';
 import * as os from 'os';
 
 export type CachedDnsDefaults = {
-  defaultFamily: number | undefined;
-  defaultHints: number | undefined;
+  defaults?: dns.LookupOptions;
+  overrides?: dns.LookupOptions;
+  additionalHints?: number;
 };
 
 interface DnsRecord extends dns.RecordWithTtl {
@@ -13,6 +14,7 @@ interface DnsRecord extends dns.RecordWithTtl {
 
 interface StrictLookupOptions extends dns.LookupOptions {
   family: LookupType;
+  hints: number;
 }
 
 type AddressCacheEntry = {
@@ -51,10 +53,7 @@ class AddressCache {
   }
 }
 
-let defaultOptions: CachedDnsDefaults = {
-  defaultFamily: undefined,
-  defaultHints: undefined,
-};
+let defaultOptions: CachedDnsDefaults = {};
 const addressCache = new AddressCache();
 
 // dns.NODATA and dns.NONAME errors are internally translated by lookup() to ENOTFOUND
@@ -77,6 +76,7 @@ const makeNotFoundError = (
 };
 
 enum LookupType {
+  IPv4Andv6 = 0,
   IPv4 = 4,
   IPv6 = 6,
 }
@@ -158,6 +158,31 @@ function lookup(
   );
 }
 
+const strictLookupOptions = (
+  options: dns.LookupOptions
+): StrictLookupOptions => {
+  options = {
+    ...defaultOptions.defaults,
+    ...options,
+    ...defaultOptions.overrides,
+  };
+
+  if (
+    options.family !== LookupType.IPv4 &&
+    options.family !== LookupType.IPv6
+  ) {
+    options.family = LookupType.IPv4Andv6;
+  }
+  if (!options.hints) {
+    options.hints = 0;
+  }
+  if (defaultOptions.additionalHints) {
+    options.hints |= defaultOptions.additionalHints;
+  }
+
+  return options as StrictLookupOptions;
+};
+
 function lookupPromise(
   hostname: string,
   options: dns.LookupAllOptions
@@ -175,21 +200,16 @@ async function lookupPromise(
   hostname: string,
   optionsOrFamily?: any
 ): Promise<dns.LookupAddress | dns.LookupAddress[]> {
-  let options: dns.LookupOptions;
+  let lookupOptions: dns.LookupOptions;
   if (typeof optionsOrFamily === 'number') {
-    options = {family: optionsOrFamily};
+    lookupOptions = {family: optionsOrFamily};
   } else if (!optionsOrFamily) {
-    options = {};
+    lookupOptions = {};
   } else {
-    options = optionsOrFamily;
+    lookupOptions = optionsOrFamily;
   }
 
-  if (!options.family) {
-    options.family = defaultOptions.defaultFamily;
-  }
-  if (!options.hints) {
-    options.hints = defaultOptions.defaultHints;
-  }
+  const options = strictLookupOptions(lookupOptions);
 
   // TODO: DEP0118
   if (!hostname) {
@@ -207,8 +227,8 @@ async function lookupPromise(
 
   if (options.hints && options.hints & dns.ADDRCONFIG) {
     const supportedFamilies = getSupportedFamilies();
-    if (supportedFamilies !== undefined) {
-      if (!options.family) {
+    if (supportedFamilies !== LookupType.IPv4Andv6) {
+      if (options.family === LookupType.IPv4Andv6) {
         options.family = supportedFamilies;
       } else if (options.family !== supportedFamilies) {
         // If we specified a family, and we can't support it with this lookup, reject
@@ -228,16 +248,13 @@ async function lookupPromise(
       .then(results => mapAddresses(results, options))
       .then(resultHandler);
   }
+
   switch (options.family) {
     case LookupType.IPv4:
     case LookupType.IPv6:
-      return await resolve(hostname, options as StrictLookupOptions).then(
-        resultHandler
-      );
-    case undefined:
+      return await resolve(hostname, options).then(resultHandler);
+    case LookupType.IPv4Andv6:
       return await resolveBoth(hostname, options).then(resultHandler);
-    default:
-      throw new Error('invalid family number');
   }
 }
 
@@ -304,7 +321,7 @@ const resolve = async (
 
 const resolveBoth = async (
   hostname: string,
-  options: dns.LookupOptions
+  options: StrictLookupOptions
 ): Promise<dns.LookupAddress[]> => {
   const wrapNotFound = async (
     promise: Promise<dns.LookupAddress[]>
@@ -386,8 +403,8 @@ const mapAddresses = (
   return newResults;
 };
 
-let cachedSupportedFamilies: LookupType | undefined | null = null;
-const getSupportedFamilies = (): LookupType | undefined => {
+let cachedSupportedFamilies: LookupType | null = null;
+const getSupportedFamilies = (): LookupType => {
   if (cachedSupportedFamilies === null) {
     const supported = new Set<LookupType>();
     Object.values(os.networkInterfaces()).forEach(
@@ -412,8 +429,8 @@ const getSupportedFamilies = (): LookupType | undefined => {
       }
     );
     if (supported.size === 0 || supported.size === 2) {
-      cachedSupportedFamilies = undefined;
-      return undefined;
+      cachedSupportedFamilies = LookupType.IPv4Andv6;
+      return LookupType.IPv4Andv6;
     } else {
       const result = supported.entries().next().value;
       cachedSupportedFamilies = result;
@@ -452,5 +469,6 @@ export {
   patchGlobal,
   unpatchGlobal,
   setDefaults,
+  getSupportedFamilies,
   clearSupportedFamilies,
 };
